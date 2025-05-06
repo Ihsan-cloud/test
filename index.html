@@ -232,7 +232,13 @@ body {
 
     const relayCount = 5;
     const relayPrefix = "relay"; // path di Firebase: relay0, relay1, dst.
-
+const relayNames = {
+  relay1: "Lampu",
+  relay2: "Kipas",
+  relay3: "Nyamuk",
+  relay4: "Stop Kontak 1",
+  relay5: "Stop Kontak 2"
+};
     function toggleRelay(index) {
       const relayRef = db.ref(relayPrefix + index);
       relayRef.once("value").then(snapshot => {
@@ -255,16 +261,15 @@ body {
     }
 
     function showNotification(text) {
-      const notif = document.getElementById("notification");
-      notif.textContent = text;
-      notif.style.display = "block";
-      notif.style.animation = "notificationAppear 0.5s ease-out forwards";
-
-      setTimeout(() => {
-        notif.style.animation = "notificationClose 0.5s ease-in forwards";
-        setTimeout(() => { notif.style.display = "none"; }, 500);
-      }, 2000);
-    }
+    function showNotification(relayId, status) {
+  const name = relayNames[relayId] || relayId; // fallback ke ID jika nama tidak ditemukan
+  const msg = `${name} ${status.toUpperCase()}`;
+  const noti = document.createElement("div");
+  noti.className = "notif";
+  noti.textContent = msg;
+  document.body.appendChild(noti);
+  setTimeout(() => { noti.remove(); }, 2000);
+}
 
     function updateTimeAndDay() {
       const now = new Date();
