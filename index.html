@@ -3,6 +3,7 @@
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
+    /* ... (CSS sebelumnya tetap sama) ... */
 body {
   font-family: Arial, sans-serif; text-align: center; background: white; color: #000080;
 }
@@ -198,9 +199,67 @@ body {
   color: red;
   cursor: pointer;
   margin-left: 10px;
-}    /* ... CSS kamu yang sudah lengkap di atas ... */
-  </style>
+}    
 
+    /* Tambahan CSS baru */
+    .schedule-form {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #CCFFFF;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+      z-index: 1000;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+      font-size: 1.2em;
+      display: none;
+      animation: formAppear 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .schedule-form.visible {
+      display: block;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .controls button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .add-schedule-btn {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .view-schedule-btn {
+      background: #2196F3;
+      color: white;
+    }
+
+    .close-btn {
+      background: #f44336;
+      color: white;
+    }
+
+    .controls button:hover {
+      opacity: 0.8;
+      transform: scale(1.05);
+    }
+  </style>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -208,38 +267,63 @@ body {
 <body>
   <div class="container">
     <h1 class="judul">SWITCH</h1>
-    <div class="datetime-container">
+    <div class="datetime-container" id="datetimeContainer">
       <div class="day-display" id="day-display">Minggu</div>
       <div class="time-display" id="time">00:00:00</div>
-  <form id="addScheduleForm" onsubmit="return addScheduleAndClose();">
-  <label>Relay:</label>
-  <select id="relaySelect">
-    <option value="0">Lampu</option>
-    <option value="1">Kipas</option>
-    <option value="2">Nyamuk</option>
-    <option value="3">LED</option>
-    <option value="4">Stop Kontak</option>
-  </select>
+    </div>
 
-  <label>Hari:</label>
-  <select id="daySelect">
-    <option value="0">Minggu</option>
-    <option value="1">Senin</option>
-    <option value="2">Selasa</option>
-    <option value="3">Rabu</option>
-    <option value="4">Kamis</option>
-    <option value="5">Jumat</option>
-    <option value="6">Sabtu</option>
-  </select>
+    <!-- Form Jadwal (Awalnya tersembunyi) -->
+    <div id="scheduleForm" class="schedule-form">
+      <h3>Tambah Jadwal Baru</h3>
+      <form id="addScheduleForm" onsubmit="return addScheduleAndClose();">
+        <label>Relay:</label>
+        <select id="relaySelect">
+          <option value="0">Lampu</option>
+          <option value="1">Kipas</option>
+          <option value="2">Nyamuk</option>
+          <option value="3">LED</option>
+          <option value="4">Stop Kontak</option>
+        </select>
 
-  <label>Jam ON:</label>
-  <input type="time" id="onTime" required>
+        <label>Hari:</label>
+        <select id="daySelect">
+          <option value="0">Minggu</option>
+          <option value="1">Senin</option>
+          <option value="2">Selasa</option>
+          <option value="3">Rabu</option>
+          <option value="4">Kamis</option>
+          <option value="5">Jumat</option>
+          <option value="6">Sabtu</option>
+        </select>
 
-  <label>Jam OFF:</label>
-  <input type="time" id="offTime" required>
+        <label>Jam ON:</label>
+        <input type="time" id="onTime" required>
 
-  <button type="submit">Tambah</button>
-  </form>
+        <label>Jam OFF:</label>
+        <input type="time" id="offTime" required>
+
+        <div class="controls">
+          <button type="submit" class="add-schedule-btn">Tambah</button>
+          <button type="button" class="close-btn" onclick="hideScheduleForm()">Tutup</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Panel Jadwal Hari Ini (Awalnya tersembunyi) -->
+    <div id="todaySchedule" class="schedule-form">
+      <h3>Jadwal Hari Ini</h3>
+      <div id="scheduleListContent"></div>
+      <div class="controls">
+        <button class="close-btn" onclick="hideTodaySchedule()">Tutup</button>
+      </div>
+    </div>
+
+    <!-- Tombol Kontrol -->
+    <div class="controls">
+      <button class="add-schedule-btn" onclick="showScheduleForm()">Tambah Jadwal</button>
+      <button class="view-schedule-btn" onclick="showTodaySchedule()">Lihat Jadwal Hari Ini</button>
+    </div>
+
     <div class="relay-grid">
       <div class="relay" id="relay0" data-name="Lampu" onclick="toggleRelay(0)">Lampu</div>
       <div class="relay" id="relay1" data-name="Kipas" onclick="toggleRelay(1)">Kipas</div>
@@ -249,35 +333,84 @@ body {
     </div>
 
     <div id="notification" class="notification"></div>
-
-    <div id="schedule-setting" class="schedule-setting hidden">
-      <div id="schedule-list" class="schedule-list"></div>
-      <div class="vertical-text" onclick="closeScheduleList()">TUTUP</div>
-      <div id="connection-badge" class="connection-status offline-status">
-        <span class="cloud-icon">☁️</span>
-        <span id="connection-text">offline</span>
-      </div>
-    </div>
   </div>
 
   <script>
-    // Firebase Configuration (ganti dengan milikmu)
+    // Firebase Configuration
     var firebaseConfig = {
-  apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
-  authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
-  databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "ihsan-cloud-f3a02",
-  storageBucket: "ihsan-cloud-f3a02.appspot.com",
-  messagingSenderId: "442997712719",
-  appId: "1:442997712719:web:de3ef3dc4cbb5b5925873a"
-};
+      apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
+      authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
+      databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ihsan-cloud-f3a02",
+      storageBucket: "ihsan-cloud-f3a02.appspot.com",
+      messagingSenderId: "442997712719",
+      appId: "1:442997712719:web:de3ef3dc4cbb5b5925873a"
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     const relayCount = 5;
-    const relayPrefix = "relay"; // path di Firebase: relay0, relay1, dst.
+    const relayPrefix = "relay";
 
-    function toggleRelay(index) {
+    // Fungsi untuk menampilkan/sembunyikan form
+    function showScheduleForm() {
+      document.getElementById('scheduleForm').classList.add('visible');
+    }
+
+    function hideScheduleForm() {
+      document.getElementById('scheduleForm').classList.remove('visible');
+    }
+
+    function showTodaySchedule() {
+      const now = new Date();
+      const today = now.getDay();
+      loadUpcomingSchedules(today);
+      document.getElementById('todaySchedule').classList.add('visible');
+    }
+
+    function hideTodaySchedule() {
+      document.getElementById('todaySchedule').classList.remove('visible');
+    }
+
+    // Fungsi untuk memuat jadwal
+    function loadUpcomingSchedules(day) {
+      const dayRef = db.ref("schedules/" + day);
+      const list = document.getElementById("scheduleListContent");
+      list.innerHTML = "";
+
+      dayRef.once("value", snapshot => {
+        if (snapshot.exists()) {
+          snapshot.forEach(child => {
+            const data = child.val();
+            const item = document.createElement("div");
+            item.className = "schedule-item";
+            item.textContent = `${getRelayName(data.relay)}: ${data.on} - ${data.off}`;
+            
+            const del = document.createElement("button");
+            del.textContent = "Hapus";
+            del.className = "delete-btn";
+            del.onclick = () => {
+              dayRef.child(child.key).remove();
+              loadUpcomingSchedules(day);
+              showNotification("Jadwal dihapus");
+            };
+
+            item.appendChild(del);
+            list.appendChild(item);
+          });
+        } else {
+          list.innerHTML = "<i>Belum ada jadwal untuk hari ini</i>";
+        }
+      });
+    }
+
+    function getRelayName(index) {
+      const names = ["Lampu", "Kipas", "Nyamuk", "LED", "Stop Kontak"];
+      return names[index] || "Relay " + index;
+    }
+
+// Fungsi toggle relay (ON/OFF)
+function toggleRelay(index) {
   const relayRef = db.ref(relayPrefix + index);
   const relayEl = document.getElementById(relayPrefix + index);
   const relayName = relayEl.getAttribute("data-name");
@@ -289,74 +422,45 @@ body {
     showNotification(`${relayName} ${newState ? "ON" : "OFF"}`);
   });
 }
-    function updateRelayUI(index, state) {
-      const relayEl = document.getElementById(relayPrefix + index);
-      if (relayEl) {
-        if (state === 1) {
-          relayEl.classList.add("on");
-        } else {
-          relayEl.classList.remove("on");
-        }
-      }
-    }
-function loadUpcomingSchedules() {
-  const now = new Date();
-  const hari = now.getDay(); // Ini dipakai untuk ambil jadwal hari ini
-  const todayRef = db.ref("schedules/" + hari);
 
-  todayRef.once("value", snapshot => {
-    const list = document.getElementById("scheduleListContent");
-    list.innerHTML = "";
-
-    if (snapshot.exists()) {
-      snapshot.forEach(child => {
-        const data = child.val();
-        const item = document.createElement("div");
-        item.className = "schedule-item";
-        item.textContent = `${getRelayName(data.relay)}: ${data.on} - ${data.off}`;
-        
-        const del = document.createElement("button");
-        del.textContent = "Hapus";
-        del.onclick = () => {
-          todayRef.child(child.key).remove();
-          loadUpcomingSchedules();
-          showNotification("Jadwal dihapus");
-        };
-
-        item.appendChild(del);
-        list.appendChild(item);
-      });
-    } else {
-      list.innerHTML = "<i>Belum ada jadwal hari ini</i>";
-    }
-  });
+// Update tampilan relay
+function updateRelayUI(index, state) {
+  const relayEl = document.getElementById(relayPrefix + index);
+  if (relayEl) {
+    relayEl.classList.toggle("on", state === 1);
+  }
 }
-    
-    function showNotification(text) {
-      const notif = document.getElementById("notification");
-      notif.textContent = text;
-      notif.style.display = "block";
-      notif.style.animation = "notificationAppear 0.5s ease-out forwards";
 
-      setTimeout(() => {
-        notif.style.animation = "notificationClose 0.5s ease-in forwards";
-        setTimeout(() => { notif.style.display = "none"; }, 500);
-      }, 2000);
-    }
+// Menampilkan notifikasi
+function showNotification(text) {
+  const notif = document.getElementById("notification");
+  notif.textContent = text;
+  notif.style.display = "block";
+  notif.style.animation = "notificationAppear 0.5s ease-out forwards";
 
-    function updateTimeAndDay() {
-      const now = new Date();
-      const timeEl = document.getElementById("time");
-      const dayEl = document.getElementById("day-display");
-      const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-      const h = now.getHours().toString().padStart(2, '0');
-      const m = now.getMinutes().toString().padStart(2, '0');
-      const s = now.getSeconds().toString().padStart(2, '0');
-      timeEl.textContent = `${h}:${m}:${s}`;
-      const day = days[now.getDay()];
-      dayEl.textContent = day;
-      dayEl.className = "day-display " + (day === "Minggu" ? "sunday" : day === "Jumat" ? "friday" : "other");
-    }
+  setTimeout(() => {
+    notif.style.animation = "notificationClose 0.5s ease-in forwards";
+    setTimeout(() => { notif.style.display = "none"; }, 500);
+  }, 2000);
+}
+
+// Update waktu dan hari
+function updateTimeAndDay() {
+  const now = new Date();
+  const timeEl = document.getElementById("time");
+  const dayEl = document.getElementById("day-display");
+  const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+  
+  timeEl.textContent = now.toLocaleTimeString('id-ID', {hour12: false});
+  const day = days[now.getDay()];
+  
+  dayEl.textContent = day;
+  dayEl.className = "day-display " + 
+    (day === "Minggu" ? "sunday" : 
+     day === "Jumat" ? "friday" : "other");
+}
+
+// Menambah jadwal (dipanggil dari form)
 function addScheduleAndClose() {
   const relay = document.getElementById("relaySelect").value;
   const on = document.getElementById("onTime").value;
@@ -371,31 +475,28 @@ function addScheduleAndClose() {
   const newRef = db.ref("schedules/" + day).push();
   newRef.set({ relay, on, off }, () => {
     showNotification("Jadwal ditambahkan");
-    loadUpcomingSchedules();
     document.getElementById("addScheduleForm").reset();
+    hideScheduleForm(); // Ditambahkan untuk auto-close form setelah submit
   });
 
   return false;
 }
-    function checkConnectionStatus() {
-      const connRef = firebase.database().ref(".info/connected");
-      connRef.on("value", (snap) => {
-        const online = snap.val() === true;
-        const badge = document.getElementById("connection-badge");
-        const text = document.getElementById("connection-text");
-        if (online) {
-          badge.classList.remove("offline-status");
-          badge.classList.add("online-status");
-          text.textContent = "online";
-        } else {
-          badge.classList.remove("online-status");
-          badge.classList.add("offline-status");
-          text.textContent = "offline";
-        }
-      });
-    }
 
-    // Init listeners
+// Cek status koneksi Firebase
+function checkConnectionStatus() {
+  const connRef = firebase.database().ref(".info/connected");
+  connRef.on("value", (snap) => {
+    const online = snap.val() === true;
+    const badge = document.getElementById("connection-badge");
+    const text = document.getElementById("connection-text");
+    
+    badge.classList.toggle("offline-status", !online);
+    badge.classList.toggle("online-status", online);
+    text.textContent = online ? "online" : "offline";
+  });
+}
+    
+    // Inisialisasi
     for (let i = 0; i < relayCount; i++) {
       db.ref(relayPrefix + i).on("value", snapshot => {
         updateRelayUI(i, snapshot.val());
@@ -404,7 +505,6 @@ function addScheduleAndClose() {
 
     setInterval(updateTimeAndDay, 1000);
     updateTimeAndDay();
-    checkConnectionStatus();
   </script>
 </body>
 </html>
