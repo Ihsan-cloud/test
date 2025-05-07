@@ -159,20 +159,6 @@ body {
   padding: 5px; border-bottom: 1px solid #ccc;
 }
 
-@keyframes blink {
-  0% { opacity: 1 }
-  10% { opacity: .8 }
-  20% { opacity: .6 }
-  30% { opacity: .4 }
-  40% { opacity: .2 }
-  50% { opacity: 0 }
-  60% { opacity: .2 }
-  70% { opacity: .4 }
-  80% { opacity: .6 }
-  90% { opacity: .8 }
-  100% { opacity: 1 }
-}
-
 .vertical-text {
   writing-mode: vertical-lr; text-orientation: upright;
   position: fixed; right: 10px; top: 50%;
@@ -183,8 +169,6 @@ body {
   white-space: nowrap;
 }
   </style>
-
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
@@ -217,7 +201,7 @@ body {
   </div>
 
   <script>
-    // Firebase Configuration (ganti dengan milikmu)
+    
     var firebaseConfig = {
   apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
   authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
@@ -231,7 +215,7 @@ body {
     const db = firebase.database();
 
     const relayCount = 5;
-    const relayPrefix = "relay"; // path di Firebase: relay0, relay1, dst.
+    const relayPrefix = "relay"; 
 const relayNames = {
   relay1: "Lampu",
   relay2: "Kipas",
@@ -302,8 +286,6 @@ const relayNames = {
         }
       });
     }
-
-    // Init listeners
     for (let i = 0; i < relayCount; i++) {
       db.ref(relayPrefix + i).on("value", snapshot => {
         updateRelayUI(i, snapshot.val());
