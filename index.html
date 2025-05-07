@@ -195,14 +195,6 @@ body {
       <div class="day-display" id="day-display">Minggu</div>
       <div class="time-display" id="time">00:00:00</div>
   
-<div id="scheduleList" style="display:none;" class="schedule-today">
-  <h3>Jadwal Hari Ini</h3>
-  <ul id="todayScheduleList"></ul>
-  <button onclick="document.getElementById('scheduleList').style.display='none'">TUTUP</button>
-</div>
-      <div id="scheduleForm" style="display:none;" class="add-schedule">
-  <!-- Form isi relay, hari, jam on/off -->
-</div>
     <div class="relay-grid">
       <div class="relay" id="relay0" data-name="Lampu" onclick="toggleRelay(0)">Lampu</div>
       <div class="relay" id="relay1" data-name="Kipas" onclick="toggleRelay(1)">Kipas</div>
@@ -239,21 +231,7 @@ body {
 
     const relayCount = 5;
     const relayPrefix = "relay"; // path di Firebase: relay0, relay1, dst.
-newScheduleRef.set({ relay, on: onTime, off: offTime }, () => {
-  showNotification("Jadwal ditambahkan");
-  document.getElementById("scheduleForm").style.display = "none"; // <- baris tambahan ini
-});document.getElementById("day-display").addEventListener("click", () => {
-  const form = document.getElementById("scheduleForm");
-  const list = document.getElementById("scheduleList");
-  list.style.display = list.style.display === "none" ? "block" : "none";
-  form.style.display = "none";
-  loadTodaySchedule();
-});document.getElementById("time").addEventListener("click", () => {
-  const form = document.getElementById("scheduleForm");
-  const list = document.getElementById("scheduleList");
-  form.style.display = form.style.display === "none" ? "block" : "none";
-  list.style.display = "none";
-});
+
     function toggleRelay(index) {
   const relayRef = db.ref(relayPrefix + index);
   const relayEl = document.getElementById(relayPrefix + index);
