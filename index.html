@@ -56,15 +56,17 @@
     const relayPrefix = "relay"; // path di Firebase: relay0, relay1, dst.
 
     function toggleRelay(index) {
-      const relayRef = db.ref(relayPrefix + index);
-      relayRef.once("value").then(snapshot => {
-        const currentState = snapshot.val();
-        const newState = currentState === 1 ? 0 : 1;
-        relayRef.set(newState);
-        showNotification("Relay " + index + " " + (newState ? "ON" : "OFF"));
-      });
-    }
+  const relayRef = db.ref(relayPrefix + index);
+  const relayEl = document.getElementById(relayPrefix + index);
+  const relayName = relayEl.getAttribute("data-name");
 
+  relayRef.once("value").then(snapshot => {
+    const currentState = snapshot.exists() ? snapshot.val() : 0;
+    const newState = currentState === 1 ? 0 : 1;
+    relayRef.set(newState);
+    showNotification(`${relayName} ${newState ? "ON" : "OFF"}`);
+  });
+}
     function updateRelayUI(index, state) {
       const relayEl = document.getElementById(relayPrefix + index);
       if (relayEl) {
