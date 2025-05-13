@@ -1,32 +1,798 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kontrol LED Firebase</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWITCH Controller</title>
+<style>
+body {
+  font-family: Arial, sans-serif; 
+  text-align: center; 
+  background: #F5F5F5; 
+  color: #000080;
+  margin: 0;
+  padding: 0;
+}
+
+.container { 
+  margin-top: 20px; 
+}
+
+.datetime-container { 
+  width: 95%; 
+  max-width: 400px; 
+  margin: 0 auto; 
+  border-radius: 10px; 
+  overflow: hidden; 
+}
+
+.judul {
+  text-align: center; 
+  width: 100%; 
+  margin: 2px; 
+  padding: 0; 
+  font-size: 4em; 
+  line-height: 1; 
+  cursor: pointer; 
+  color: #566D7E; 
+  user-select: none; 
+  border-bottom: 2px solid transparent; 
+  transition: border-color .3s ease; 
+  display: inline-block; 
+}
+
+.judul:hover { 
+  border-color: #0099FF; 
+}
+
+.day-display { 
+  font-size: 3em; 
+  background:#E0E5E5; 
+  font-weight: bold; 
+  padding: 10px 20px; 
+  border: 4px solid black; 
+  border-bottom: none; 
+  border-radius: 10px 10px 0 0; 
+}
+
+.time-display { 
+  font-size: 3.5em; 
+  font-weight: bold; 
+  padding: 10px 20px; 
+  background:#00BFFF; 
+  color: white; 
+  border: 4px solid black; 
+  border-top: none; 
+  border-radius: 0 0 10px 10px; 
+}
+
+.day-display.sunday { color: red; }
+.day-display.friday { color: green; }
+.day-display.other { color: black; }
+
+.relay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 3 kolom */
+  gap: 10px; /* Jarak antar relay */
+  padding: 8px;
+  width: 91%;
+  max-width: 600px;
+  margin: 5px auto 0;
+}
+
+.relay {
+  width: 100%;
+  min-height: 60px; /* Tinggi yang lebih seragam */
+  box-sizing: border-box;
+  position: relative;
+  background: #0C090A;
+  color: white;
+  border-radius: 4px; /* Sudut lebih bulat */
+  padding: 10px 5px;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1.5px solid white;
+  box-shadow: 0 0 0 3px #483C32;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center; /* Tengah secara vertikal dan horizontal */
+  cursor: pointer;
+}
+
+/* Untuk relay ke-5 (stop kontak) agar memenuhi 2 kolom */
+.relay:nth-child(5) {
+  grid-column: span 2;
+  max-width: calc(200% + 10px); /* Sesuaikan dengan gap */
+}
+
+.relay.on {
+  color: #00FFFF;
+  border-color: #00FFFF;
+  box-shadow: 0 0 0 4px #483C32;
+}
+
+.relay span {
+  display: block;
+  pointer-events: none;
+}
+
+
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #00BFFF;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 1.1em;
+  z-index: 9999;
+  opacity: 0;
+  filter: blur(8px);
+  display: none;
+  animation: none;
+}
+
+.warning-message {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: red;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 1.2em;
+  animation: blink 3s infinite;
+}
+
+.time-setting, .schedule-setting, .wifi-setting { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #CCFFFF; padding: 30px; border-radius: 15px; box-shadow: 0px 4px 10px rgba(0,0,0,0.2); z-index: 1000; width: 90%; max-width: 400px; text-align: center; font-size: 1.2em; animation: formAppear 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+.time-setting label, .schedule-setting label, .wifi-setting label { display: block; margin: 10px 0; }
+
+.time-setting input, .time-setting select, .schedule-setting input, .schedule-setting select, .wifi-setting input { font-size: 1em; padding: 5px; width: 100%; max-width: 200px; margin: 5px auto; }
+
+.time-setting button, .schedule-setting button, .wifi-setting button { font-size: 1em; padding: 10px 20px; margin-top: 10px; background: #657383; color: white; border: none; border-radius: 5px; cursor: pointer; }
+.schedule-editor {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #CCFFFF;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.schedule-list {
+  margin: 10px auto;
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 400px;
+}
+
+.schedule-item {
+  padding: 5px;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vertical-buttons {
+  position: fixed;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1001;
+}
+
+/* Warna khusus untuk tombol */
+.vertical-text.edit { 
+  background: #59E817; /* Orange */
+}
+
+.vertical-text.save {
+  background: #0909FF; /* Green */
+  order: 2;
+}
+
+.vertical-text:last-child {
+  order: 3;
+}
+
+/* Gaya dasar tombol vertikal yang sama untuk semua */
+.vertical-text {
+  writing-mode: vertical-lr;
+  text-orientation: upright;
+  font-size: 0.7em;
+  padding: 12px 4px;
+  background: #657383;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  min-height: 35px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 0.3s;
+  border: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* Efek hover */
+.vertical-text:hover {
+  filter: brightness(0.9);
+}
+
+.schedule-controls {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.schedule-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.btn-add {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+  transition: background 0.3s;
+}
+
+.btn-add:hover {
+  background: #0b7dda;
+}
+
+.btn-delete {
+  background: #f44336;
+font-size: 0.5em;
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-delete:hover {
+  background: #d32f2f;
+}
+
+.hidden { 
+  display: none; 
+}
+
+@keyframes formAppear { 
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); filter: blur(8px); } 
+  50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.05); filter: blur(2px); } 
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); } 
+}
+
+@keyframes formClose { 
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); } 
+  50% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); filter: blur(2px); } 
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); filter: blur(6px); } 
+}
+
+@keyframes appearWithBlur {
+  0% { opacity: 0; filter: blur(8px); }
+  30% { opacity: 0.3; filter: blur(6px); }
+  70% { opacity: 0.7; filter: blur(3px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+@keyframes disappearWithBlur {
+  0% { opacity: 1; filter: blur(0); }
+  30% { opacity: 0.7; filter: blur(3px); }
+  70% { opacity: 0.3; filter: blur(6px); }
+  100% { opacity: 0; filter: blur(8px); }
+}
+
+@keyframes blink { 
+  0% { opacity: 1 } 
+  50% { opacity: 0 } 
+  100% { opacity: 1 } 
+}
+</style>
 </head>
 <body>
-  <h2>Kendalikan LED Bawaan ESP8266</h2>
-  <button onclick="setLED('ON')">Nyalakan LED</button>
-  <button onclick="setLED('OFF')">Matikan LED</button>
+<div class="container">
+<h1 class="judul" onclick="toggleForm('wifi')">SWITCH</h1>
+    <div class="datetime-container">
+  <div class="day-display" id="day-display" onclick="toggleForm('schedule')">Minggu</div>
+  <div class="time-display" id="time" onclick="toggleForm('time')">00:00:00</div>
+</div>
+<div class="relay-grid">
+      <div class="relay" id="relay2" data-name="Nyamuk" onclick="toggleRelay(2)">Nyamuk</div>
+<div class="relay" id="relay4" data-name="Stop Kontak" onclick="toggleRelay(4)">Stop Kontak</div>
+<div class="relay" id="relay3" data-name="Led" onclick="toggleRelay(3)">LED</div>
+<div class="relay" id="relay1" data-name="Kipas" onclick="toggleRelay(1)">Kipas</div>
+<div class="relay" id="relay0" data-name="Lampu" onclick="toggleRelay(0)">Lampu</div>
+    <div id="notification" class="notification"></div>
+    
+    <!-- Time Settings Form -->
+    <div id="time-settings" class="time-setting hidden">
+      <label>Hari:
+        <select id="day">
+          <option value="0">Minggu</option>
+          <option value="1">Senin</option>
+          <option value="2">Selasa</option>
+          <option value="3">Rabu</option>
+          <option value="4">Kamis</option>
+          <option value="5">Jum'at</option>
+          <option value="6">Sabtu</option>
+        </select>
+      </label>
+      <label>Jam:
+        <input type="number" id="hour" min="0" max="23">
+      </label>
+      <label>Menit:
+        <input type="number" id="minute" min="0" max="59">
+      </label>
+      <button onclick="toggleForm('time', 'close')">CANCEL</button>
+      <button onclick="setTime()">SET WAKTU</button>
+    </div>
+    
+    <!-- WiFi Settings Form -->
+    <div id="wifi-setting" class="wifi-setting hidden">
+      <label>SSID:
+        <input type="text" id="wifi-ssid" placeholder="Nama WiFi">
+      </label>
+      <label>Password:
+        <input type="password" id="wifi-password" placeholder="Password WiFi">
+      </label>
+      <button onclick="toggleForm('wifi', 'close')">CANCEL</button>
+      <button onclick="submitWiFiForm()">CONNECT</button>
+    </div>
+    
+    <!-- Schedule List -->
+    <div id="schedule-setting" class="schedule-setting hidden">
+      <div id="schedule-list" class="schedule-list"></div>
+     <div class="vertical-buttons">
+  <button class="vertical-text edit" onclick="openScheduleEditor()">EDIT</button>
+  <button class="vertical-text save" onclick="saveAllSchedules()">SIMPAN</button> 
+  <button class="vertical-text" onclick="closeScheduleList()">TUTUP</button>
+</div>
+    
+    <!-- Schedule Editor -->
+    <div id="schedule-editor" class="schedule-editor hidden">
+      <h2>Edit Jadwal</h2>
+      <div class="schedule-controls">
+        <div class="form-group">
+          <label>Pilih Hari:
+            <select id="editor-day-type" onchange="loadDaySchedules()">
+              <option value="normal">Hari Biasa</option>
+              <option value="friday">Jumat</option>
+              <option value="saturday">Sabtu</option>
+              <option value="sunday">Minggu</option>
+              <option value="nyamuk">Nyamuk (Setiap Hari)</option>
+            </select>
+          </label>
+        </div>
+        
+        <div id="editor-schedule-list" class="schedule-list"></div>
+        
+        <div class="schedule-form">
+          <h3>Tambah Jadwal Baru</h3>
+          <div class="form-group">
+            <label>Perangkat:
+              <select id="new-schedule-relay">
+                <option value="0">Lampu</option>
+                <option value="1">Kipas</option>
+                <option value="2">Nyamuk</option>
+                <option value="4">Stop Kontak</option>
+                <option value="3">LED</option>
+              </select>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>Waktu:
+              <input type="number" id="new-schedule-hour" min="0" max="23" placeholder="Jam">
+              <input type="number" id="new-schedule-minute" min="0" max="59" placeholder="Menit">
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>Aksi:
+              <select id="new-schedule-action">
+                <option value="1">Nyalakan</option>
+                <option value="0">Matikan</option>
+              </select>
+            </label>
+          </div>
+          
+          <button class="btn-add" onclick="addSchedule()">Tambah Jadwal</button>
+        </div>
+      </div>
+      
 
-  <script>
-    const databaseURL = "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app/led.json";
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+// Konfigurasi Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyYOUR_API_KEY",
+    authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
+    databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "ihsan-cloud-f3a02",
+    storageBucket: "ihsan-cloud-f3a02.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "1:YOUR_APP_ID:web:YOUR_APP_KEY"
+};
 
-    function setLED(state) {
-      fetch(databaseURL, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(state)
-      })
-      .then(res => res.json())
-      .then(data => {
-        alert("LED disetel ke: " + state);
-      })
-      .catch(err => {
-        alert("Gagal mengirim: " + err);
-      });
+// Inisialisasi Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// Variabel Global
+let notificationTimeout = null;
+let currentEditingDay = 'normal';
+let allSchedules = {};
+const manualControl = [false, false, false, false, false];
+
+// Fungsi Utama
+function initializeApp() {
+    setupFirebaseListeners();
+    setupEventListeners();
+    startTimers();
+    loadInitialData();
+}
+
+// Firebase Functions
+function syncRelayStateToFirebase(relayId, state) {
+    database.ref(`devices/relay${relayId}`).set(state ? "ON" : "OFF")
+        .then(() => console.log(`Relay ${relayId} updated to Firebase`))
+        .catch(error => console.error('Firebase sync error:', error));
+}
+
+function syncTimeToFirebase(hour, minute, day) {
+    database.ref('system/time').set({
+        hour: hour,
+        minute: minute,
+        day: day
+    }).then(() => console.log('Time synced to Firebase'))
+      .catch(error => console.error('Time sync error:', error));
+}
+
+function setupFirebaseListeners() {
+    // Listen for relay changes
+    for (let i = 0; i < 5; i++) {
+        database.ref(`devices/relay${i}`).on('value', (snapshot) => {
+            const state = snapshot.val();
+            if (state !== null && !manualControl[i]) {
+                const relayElement = document.getElementById(`relay${i}`);
+                const currentState = relayElement.classList.contains('on');
+                const newState = state === "ON";
+                
+                if (currentState !== newState) {
+                    toggleRelay(i, true); // true means skip Firebase sync
+                }
+            }
+        });
     }
-  </script>
+
+    // Listen for time changes
+    database.ref('system/time').on('value', (snapshot) => {
+        const timeData = snapshot.val();
+        if (timeData) {
+            updateTimeDisplay(timeData.hour, timeData.minute, timeData.day);
+        }
+    });
+}
+
+// UI Functions
+function toggleRelay(id, skipFirebaseSync = false) {
+    fetch(`/control?relay${id}=TOGGLE`)
+        .then(response => {
+            if (!response.ok) throw Error("Control failed");
+            return response.text();
+        })
+        .then(state => {
+            const relayElement = document.getElementById(`relay${id}`);
+            const isOn = state === "ON";
+            
+            relayElement.classList.toggle('on', isOn);
+            showNotification(`${relayElement.dataset.name} ${isOn ? "ON" : "OFF"}`);
+            
+            if (!skipFirebaseSync) {
+                syncRelayStateToFirebase(id, isOn);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            showNotification("Control failed");
+        });
+}
+
+function updateTime() {
+    fetch('/getTime')
+        .then(response => response.json())
+        .then(data => {
+            updateTimeDisplay(data.hour, data.minute, data.day);
+            syncTimeToFirebase(data.hour, data.minute, data.day);
+        })
+        .catch(error => console.error("Failed to update time:", error));
+}
+
+function updateTimeDisplay(hour, minute, day) {
+    // Format waktu dengan leading zero
+    const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+    document.getElementById('time').textContent = formattedTime;
+    
+    // Update tampilan hari
+    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
+    const dayElement = document.getElementById('day-display');
+    dayElement.textContent = days[day];
+    
+    // Styling khusus hari
+    dayElement.className = "day-display";
+    if (day === 0) dayElement.classList.add('sunday');
+    else if (day === 5) dayElement.classList.add('friday');
+    else dayElement.classList.add('other');
+}
+
+function updateRelayStatus() {
+    fetch('/getRelayStatus')
+        .then(response => {
+            if (!response.ok) throw Error("Status update failed");
+            return response.json();
+        })
+        .then(data => {
+            for (let i = 0; i < 5; i++) {
+                const relayElement = document.getElementById(`relay${i}`);
+                const state = data[`relay${i}`];
+                relayElement.classList.toggle('on', state === "ON");
+            }
+        })
+        .catch(error => console.error("Status update error:", error));
+}
+
+// Schedule Management
+function updateSchedules() {
+    fetch('/getNextSchedules')
+        .then(response => response.json())
+        .then(data => {
+            let scheduleHTML = '';
+            data.schedules.forEach(item => {
+                scheduleHTML += `<div class="schedule-item">${item}</div>`;
+            });
+            document.getElementById('schedule-list').innerHTML = scheduleHTML;
+        })
+        .catch(error => console.error("Schedule update error:", error));
+}
+
+function openScheduleEditor() {
+    fetch('/getAllSchedules')
+        .then(response => response.json())
+        .then(data => {
+            allSchedules = data;
+            loadDaySchedules();
+            toggleForm('editor', 'open');
+        })
+        .catch(error => {
+            console.error('Error loading schedules:', error);
+            showNotification('Failed to load schedules');
+        });
+}
+
+function loadDaySchedules() {
+    currentEditingDay = document.getElementById('editor-day-type').value;
+    const schedules = allSchedules[currentEditingDay] || [];
+    const scheduleList = document.getElementById('editor-schedule-list');
+    
+    let html = `<h3>${getDayName(currentEditingDay)} Schedules</h3>`;
+    
+    if (schedules.length === 0) {
+        html += '<p>No schedules</p>';
+    } else {
+        html += '<ul class="schedule-items">';
+        schedules.forEach((schedule, index) => {
+            html += `
+                <li class="schedule-item">
+                    <span class="schedule-time">${formatTime(schedule.hour, schedule.minute)}</span>
+                    <span class="schedule-device">${getDeviceName(schedule.relay)}</span>
+                    <span class="schedule-action ${schedule.state ? 'ON' : 'OFF'}">${schedule.state ? 'ON' : 'OFF'}</span>
+                    <button class="btn-delete" onclick="deleteSchedule(${index})">Delete</button>
+                </li>
+            `;
+        });
+        html += '</ul>';
+    }
+    
+    scheduleList.innerHTML = html;
+}
+
+// Helper Functions
+function showNotification(message, duration = 4000) {
+    const notif = document.getElementById('notification');
+    if (!notif) return;
+
+    if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+        notif.style.animation = 'none';
+        notif.style.display = 'none';
+        void notif.offsetHeight;
+    }
+
+    notif.textContent = message;
+    notif.style.display = 'block';
+    notif.style.animation = 'appearWithBlur 0.8s forwards';
+
+    notificationTimeout = setTimeout(() => {
+        notif.style.animation = 'disappearWithBlur 0.8s forwards';
+        notif.addEventListener('animationend', () => {
+            notif.style.display = 'none';
+        }, { once: true });
+    }, duration);
+}
+
+function getDayName(dayType) {
+    const names = {
+        'normal': 'Normal Day',
+        'friday': 'Friday',
+        'saturday': 'Saturday',
+        'sunday': 'Sunday',
+        'nyamuk': 'Nyamuk Schedule'
+    };
+    return names[dayType] || dayType;
+}
+
+function getDeviceName(relayIndex) {
+    const names = {
+        0: 'Lamp',
+        1: 'Fan',
+        2: 'Nyamuk',
+        4: 'Outlet',
+        3: 'LED'
+    };
+    return names[relayIndex] || 'Unknown';
+}
+
+function formatTime(h, m) {
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Relay click handlers
+    for (let i = 0; i < 5; i++) {
+        document.getElementById(`relay${i}`).addEventListener('click', () => toggleRelay(i));
+    }
+
+    // Form handlers
+    document.querySelector('#wifi-setting button[onclick="submitWiFiForm()"]')
+        .addEventListener('click', submitWiFiForm);
+    
+    document.querySelector('#time-settings button[onclick="setTime()"]')
+        .addEventListener('click', setTime);
+}
+
+function submitWiFiForm() {
+    const ssid = document.getElementById('wifi-ssid').value;
+    const password = document.getElementById('wifi-password').value;
+    
+    fetch('/setWiFi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ssid, password })
+    })
+    .then(response => {
+        if (!response.ok) throw Error('WiFi config failed');
+        toggleForm('wifi', 'close');
+        showNotification('WiFi settings saved');
+    })
+    .catch(error => {
+        console.error(error);
+        showNotification('Failed to save WiFi settings');
+    });
+}
+
+function setTime() {
+    const hour = document.getElementById('hour').value;
+    const minute = document.getElementById('minute').value;
+    const day = document.getElementById('day').value;
+    
+    fetch(`/setTime?hour=${hour}&minute=${minute}&day=${day}`)
+        .then(() => {
+            toggleForm('time', 'close');
+            updateTime();
+        })
+        .catch(error => {
+            console.error("Time set error:", error);
+            showNotification("Failed to set time");
+        });
+}
+
+// Timer Functions
+function startTimers() {
+    setInterval(updateTime, 1000);
+    setInterval(updateRelayStatus, 5000);
+    setInterval(updateSchedules, 300000); // 5 minutes
+}
+
+function loadInitialData() {
+    updateTime();
+    updateRelayStatus();
+    updateSchedules();
+}
+
+// Form Management
+function toggleForm(formType, action = 'toggle') {
+    const formIds = {
+        wifi: 'wifi-setting',
+        time: 'time-settings',
+        schedule: 'schedule-setting',
+        editor: 'schedule-editor'
+    };
+
+    const form = document.getElementById(formIds[formType]);
+    if (!form) return;
+
+    if (action === 'close' || !form.classList.contains('hidden')) {
+        form.style.animation = 'formClose 0.6s forwards';
+        form.addEventListener('animationend', () => {
+            form.classList.add('hidden');
+        }, { once: true });
+    } else {
+        form.classList.remove('hidden');
+        form.style.animation = 'formAppear 0.6s forwards';
+        
+        if (formType === 'schedule') {
+            updateSchedules();
+        }
+    }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+</script>
 </body>
 </html>
