@@ -1,29 +1,32 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Kontrol LED Firebase</title>
+</head>
 <body>
-  <h1>Kontrol LED ESP8266</h1>
-  <button onclick="sendCommand('on')">NYALAKAN</button>
-  <button onclick="sendCommand('off')">MATIKAN</button>
+  <h2>Kendalikan LED Bawaan ESP8266</h2>
+  <button onclick="setLED('ON')">Nyalakan LED</button>
+  <button onclick="setLED('OFF')">Matikan LED</button>
 
   <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
-    authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
-    databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ihsan-cloud-f3a02",
-    storageBucket: "ihsan-cloud-f3a02.firebasestorage.app",
-    messagingSenderId: "442997712719",
-    appId: "1:442997712719:web:de3ef3dc4cbb5b5925873a"
-  };
+    const databaseURL = "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app/led.json";
 
-  function sendCommand(cmd) {
-    const url = `https://${firebaseConfig.databaseURL}/devices/esp8266/command.json?auth=${firebaseConfig.apiKey}`;
-    
-    fetch(url, {
-      method: 'PUT',
-      body: JSON.stringify(cmd)
-    }).then(() => alert(`LED ${cmd}`));
-  }
+    function setLED(state) {
+      fetch(databaseURL, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(state)
+      })
+      .then(res => res.json())
+      .then(data => {
+        alert("LED disetel ke: " + state);
+      })
+      .catch(err => {
+        alert("Gagal mengirim: " + err);
+      });
+    }
   </script>
 </body>
 </html>
