@@ -1,65 +1,857 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Kontrol Relay Firebase</title>
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
-    h1 { margin-top: 30px; }
-    .relay-btn {
-      margin: 10px;
-      padding: 15px 30px;
-      font-size: 18px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    .on { background-color: #4CAF50; color: white; }
-    .off { background-color: #f44336; color: white; }
-  </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SWITCH Controller</title>
+<style>
+body {
+  font-family: Arial, sans-serif; 
+  text-align: center; 
+  background: #F5F5F5; 
+  color: #000080;
+  margin: 0;
+  padding: 0;
+}
+
+.container { 
+  margin-top: 20px; 
+}
+
+.datetime-container { 
+  width: 95%; 
+  max-width: 400px; 
+  margin: 0 auto; 
+  border-radius: 10px; 
+  overflow: hidden; 
+}
+
+.judul {
+  text-align: center; 
+  width: 100%; 
+  margin: 2px; 
+  padding: 0; 
+  font-size: 4em; 
+  line-height: 1; 
+  cursor: pointer; 
+  color: #566D7E; 
+  user-select: none; 
+  border-bottom: 2px solid transparent; 
+  transition: border-color .3s ease; 
+  display: inline-block; 
+}
+
+.judul:hover { 
+  border-color: #0099FF; 
+}
+
+.day-display { 
+  font-size: 3em; 
+  background:#E0E5E5; 
+  font-weight: bold; 
+  padding: 10px 20px; 
+  border: 4px solid black; 
+  border-bottom: none; 
+  border-radius: 10px 10px 0 0; 
+}
+
+.time-display { 
+  font-size: 3.5em; 
+  font-weight: bold; 
+  padding: 10px 20px; 
+  background:#00BFFF; 
+  color: white; 
+  border: 4px solid black; 
+  border-top: none; 
+  border-radius: 0 0 10px 10px; 
+}
+
+.day-display.sunday { color: red; }
+.day-display.friday { color: green; }
+.day-display.other { color: black; }
+
+.relay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding: 8px;
+  width: 91%;
+  max-width: 600px;
+  margin: 5px auto 0;
+}
+
+.relay {
+  width: 100%;
+  min-height: 60px;
+  box-sizing: border-box;
+  position: relative;
+  background: #0C090A;
+  color: white;
+  border-radius: 4px;
+  padding: 10px 5px;
+  font-weight: bold;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1.5px solid white;
+  box-shadow: 0 0 0 3px #483C32;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.relay:nth-child(5) {
+  grid-column: span 2;
+  max-width: calc(200% + 10px);
+}
+
+.relay.on {
+  color: #00FFFF;
+  border-color: #00FFFF;
+  box-shadow: 0 0 0 4px #483C32;
+}
+
+.relay span {
+  display: block;
+  pointer-events: none;
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #00BFFF;
+  color: white;
+  padding: 15px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  font-size: 1.1em;
+  z-index: 9999;
+  opacity: 0;
+  filter: blur(8px);
+  display: none;
+  animation: none;
+}
+
+.warning-message {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: red;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 1.2em;
+  animation: blink 3s infinite;
+}
+
+.time-setting, .schedule-setting, .wifi-setting { 
+  position: fixed; 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%); 
+  background: #CCFFFF; 
+  padding: 30px; 
+  border-radius: 15px; 
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2); 
+  z-index: 1000; 
+  width: 90%; 
+  max-width: 400px; 
+  text-align: center; 
+  font-size: 1.2em; 
+  animation: formAppear 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; 
+}
+
+.time-setting label, .schedule-setting label, .wifi-setting label { display: block; margin: 10px 0; }
+
+.time-setting input, .time-setting select, .schedule-setting input, .schedule-setting select, .wifi-setting input { 
+  font-size: 1em; 
+  padding: 5px; 
+  width: 100%; 
+  max-width: 200px; 
+  margin: 5px auto; 
+}
+
+.time-setting button, .schedule-setting button, .wifi-setting button { 
+  font-size: 1em; 
+  padding: 10px 20px; 
+  margin-top: 10px; 
+  background: #657383; 
+  color: white; 
+  border: none; 
+  border-radius: 5px; 
+  cursor: pointer; 
+}
+
+.schedule-editor {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #CCFFFF;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+  z-index: 1000;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.schedule-list {
+  margin: 10px auto;
+  padding: 10px;
+  background: #f0f0f0;
+  border-radius: 10px;
+  width: 80%;
+  max-width: 400px;
+}
+
+.schedule-item {
+  padding: 5px;
+  border-bottom: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vertical-buttons {
+  position: fixed;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1001;
+}
+
+.vertical-text.edit { 
+  background: #59E817;
+}
+
+.vertical-text.save {
+  background: #0909FF;
+  order: 2;
+}
+
+.vertical-text:last-child {
+  order: 3;
+}
+
+.vertical-text {
+  writing-mode: vertical-lr;
+  text-orientation: upright;
+  font-size: 0.7em;
+  padding: 12px 4px;
+  background: #657383;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  min-height: 35px;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  transition: all 0.3s;
+  border: none;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.vertical-text:hover {
+  filter: brightness(0.9);
+}
+
+.schedule-controls {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.schedule-form {
+  margin-top: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.btn-add {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+  transition: background 0.3s;
+}
+
+.btn-add:hover {
+  background: #0b7dda;
+}
+
+.btn-delete {
+  background: #f44336;
+  font-size: 0.5em;
+  color: white;
+  border: none;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.btn-delete:hover {
+  background: #d32f2f;
+}
+
+.hidden { 
+  display: none; 
+}
+
+@keyframes formAppear { 
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); filter: blur(8px); } 
+  50% { opacity: 0.7; transform: translate(-50%, -50%) scale(1.05); filter: blur(2px); } 
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); } 
+}
+
+@keyframes formClose { 
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); } 
+  50% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); filter: blur(2px); } 
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.3); filter: blur(6px); } 
+}
+
+@keyframes appearWithBlur {
+  0% { opacity: 0; filter: blur(8px); }
+  30% { opacity: 0.3; filter: blur(6px); }
+  70% { opacity: 0.7; filter: blur(3px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+@keyframes disappearWithBlur {
+  0% { opacity: 1; filter: blur(0); }
+  30% { opacity: 0.7; filter: blur(3px); }
+  70% { opacity: 0.3; filter: blur(6px); }
+  100% { opacity: 0; filter: blur(8px); }
+}
+
+@keyframes blink { 
+  0% { opacity: 1 } 
+  50% { opacity: 0 } 
+  100% { opacity: 1 } 
+}
+</style>
 </head>
 <body>
-  <h1>Kontrol 4 Relay via Firebase</h1>
-  <div id="buttons"></div>
+<div class="container">
+<h1 class="judul" onclick="toggleForm('wifi')">SWITCH</h1>
+    <div class="datetime-container">
+  <div class="day-display" id="day-display" onclick="toggleForm('schedule')">Minggu</div>
+  <div class="time-display" id="time" onclick="toggleForm('time')">00:00:00</div>
+</div>
+<div class="relay-grid">
+      <div class="relay" id="relay2" data-name="Nyamuk" onclick="toggleRelay(2)">Nyamuk</div>
+<div class="relay" id="relay4" data-name="Stop Kontak" onclick="toggleRelay(4)">Stop Kontak</div>
+<div class="relay" id="relay3" data-name="Led" onclick="toggleRelay(3)">LED</div>
+<div class="relay" id="relay1" data-name="Kipas" onclick="toggleRelay(1)">Kipas</div>
+<div class="relay" id="relay0" data-name="Lampu" onclick="toggleRelay(0)">Lampu</div>
+    <div id="notification" class="notification"></div>
+    
+    <!-- Time Settings Form -->
+    <div id="time-settings" class="time-setting hidden">
+      <label>Hari:
+        <select id="day">
+          <option value="0">Minggu</option>
+          <option value="1">Senin</option>
+          <option value="2">Selasa</option>
+          <option value="3">Rabu</option>
+          <option value="4">Kamis</option>
+          <option value="5">Jum'at</option>
+          <option value="6">Sabtu</option>
+        </select>
+      </label>
+      <label>Jam:
+        <input type="number" id="hour" min="0" max="23">
+      </label>
+      <label>Menit:
+        <input type="number" id="minute" min="0" max="59">
+      </label>
+      <button onclick="toggleForm('time', 'close')">CANCEL</button>
+      <button onclick="setTime()">SET WAKTU</button>
+    </div>
+    
+    <!-- WiFi Settings Form -->
+    <div id="wifi-setting" class="wifi-setting hidden">
+      <label>SSID:
+        <input type="text" id="wifi-ssid" placeholder="Nama WiFi">
+      </label>
+      <label>Password:
+        <input type="password" id="wifi-password" placeholder="Password WiFi">
+      </label>
+      <button onclick="toggleForm('wifi', 'close')">CANCEL</button>
+      <button onclick="submitWiFiForm()">CONNECT</button>
+    </div>
+    
+    <!-- Schedule List -->
+    <div id="schedule-setting" class="schedule-setting hidden">
+      <div id="schedule-list" class="schedule-list"></div>
+     <div class="vertical-buttons">
+  <button class="vertical-text edit" onclick="openScheduleEditor()">EDIT</button>
+  <button class="vertical-text save" onclick="saveAllSchedules()">SIMPAN</button> 
+  <button class="vertical-text" onclick="closeScheduleList()">TUTUP</button>
+</div>
+    
+    <!-- Schedule Editor -->
+    <div id="schedule-editor" class="schedule-editor hidden">
+      <h2>Edit Jadwal</h2>
+      <div class="schedule-controls">
+        <div class="form-group">
+          <label>Pilih Hari:
+            <select id="editor-day-type" onchange="loadDaySchedules()">
+              <option value="normal">Hari Biasa</option>
+              <option value="friday">Jumat</option>
+              <option value="saturday">Sabtu</option>
+              <option value="sunday">Minggu</option>
+              <option value="nyamuk">Nyamuk (Setiap Hari)</option>
+            </select>
+          </label>
+        </div>
+        
+        <div id="editor-schedule-list" class="schedule-list"></div>
+        
+        <div class="schedule-form">
+          <h3>Tambah Jadwal Baru</h3>
+          <div class="form-group">
+            <label>Perangkat:
+              <select id="new-schedule-relay">
+                <option value="0">Lampu</option>
+                <option value="1">Kipas</option>
+                <option value="2">Nyamuk</option>
+                <option value="4">Stop Kontak</option>
+                <option value="3">LED</option>
+              </select>
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>Waktu:
+              <input type="number" id="new-schedule-hour" min="0" max="23" placeholder="Jam">
+              <input type="number" id="new-schedule-minute" min="0" max="59" placeholder="Menit">
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>Aksi:
+              <select id="new-schedule-action">
+                <option value="1">Nyalakan</option>
+                <option value="0">Matikan</option>
+              </select>
+            </label>
+          </div>
+          
+          <button class="btn-add" onclick="addSchedule()">Tambah Jadwal</button>
+        </div>
+      </div>
+    </div>
+</div>
 
-  <script>
-    const firebaseURL = "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app/relay.json";
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+  // Konfigurasi Firebase
+  const firebaseConfig = {
+  apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
+  authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
+  databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ihsan-cloud-f3a02",
+  storageBucket: "ihsan-cloud-f3a02.firebasestorage.app",
+  messagingSenderId: "442997712719",
+  appId: "1:442997712719:web:de3ef3dc4cbb5b5925873a"
+};
 
-    let relays = { r1: 0, r2: 0, r3: 0, r4: 0 };
 
-    function renderButtons() {
-      const container = document.getElementById("buttons");
-      container.innerHTML = "";
-      for (let i = 1; i <= 4; i++) {
-        const key = `r${i}`;
-        const btn = document.createElement("button");
-        btn.className = "relay-btn " + (relays[key] ? "on" : "off");
-        btn.textContent = `Relay ${i} (${relays[key] ? "ON" : "OFF"})`;
-        btn.onclick = () => toggleRelay(key);
-        container.appendChild(btn);
+  // Inisialisasi Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  let deviceId = "ESP8266_DEVICE_1"; // ID unik perangkat Anda
+  let notificationTimeout = null;
+  let currentEditingDay = 'normal';
+  let allSchedules = {};
+
+  function showNotification(message, duration = 4000) {
+    const notif = document.getElementById('notification');
+    if (!notif) return;
+
+    if (notificationTimeout) {
+      clearTimeout(notificationTimeout);
+      notif.style.animation = 'none';
+      notif.style.display = 'none';
+      void notif.offsetHeight;
+    }
+
+    notif.textContent = message;
+    notif.style.display = 'block';
+    notif.style.opacity = '0';
+    notif.style.filter = 'blur(8px)';
+    notif.style.animation = 'appearWithBlur 0.8s forwards';
+
+    notificationTimeout = setTimeout(() => {
+      notif.style.animation = 'disappearWithBlur 0.8s forwards';
+      const onAnimationEnd = () => {
+        notif.style.display = 'none';
+        notif.removeEventListener('animationend', onAnimationEnd);
+      };
+      notif.addEventListener('animationend', onAnimationEnd);
+    }, duration);
+  }
+
+  function toggleRelay(id) {
+    const updates = {};
+    updates[`devices/${deviceId}/commands/relay${id}`] = "TOGGLE";
+    
+    database.ref().update(updates)
+      .then(() => {
+        showNotification(`Mengirim perintah ke relay ${id}`);
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        showNotification("Gagal mengirim perintah");
+      });
+  }
+
+  function updateTime() {
+    const timeElement = document.getElementById('time');
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    timeElement.innerText = `${hours}:${minutes}:${seconds}`;
+    
+    updateDayDisplay(now.getDay());
+  }
+
+  function updateDayDisplay(day) {
+    let e = document.getElementById('day-display');
+    let n = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
+    e.innerText = n[day];
+    e.className = "day-display";
+    if(day === 0) e.classList.add('sunday');
+    else if(day === 5) e.classList.add('friday');
+    else e.classList.add('other');
+  }
+
+  function submitWiFiForm() {
+    let ssid = document.getElementById('wifi-ssid').value;
+    let password = document.getElementById('wifi-password').value;
+    
+    const updates = {};
+    updates[`devices/${deviceId}/commands/wifi`] = {
+      ssid: ssid,
+      password: password
+    };
+    
+    database.ref().update(updates)
+      .then(() => {
+        toggleForm('wifi', 'close');
+        showNotification("Mengirim kredensial WiFi");
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        showNotification("Gagal mengirim kredensial");
+      });
+  }
+
+  function updateRelayStatus() {
+    database.ref(`devices/${deviceId}/status/relays`).once('value')
+      .then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          for(let i = 0; i < 5; i++) {
+            let e = document.getElementById(`relay${i}`);
+            if (e) {
+              e.classList.toggle('on', data[i] === "ON");
+            }
+          }
+        }
+      })
+      .catch(error => {
+        console.error("Error getting relay status:", error);
+      });
+  }
+
+  function setTime() {
+    let h = document.getElementById('hour').value;
+    let m = document.getElementById('minute').value;
+    let d = document.getElementById('day').value;
+    
+    const updates = {};
+    updates[`devices/${deviceId}/commands/time`] = {
+      hour: h,
+      minute: m,
+      day: d
+    };
+    
+    database.ref().update(updates)
+      .then(() => {
+        toggleForm('time', 'close');
+        showNotification("Waktu berhasil diatur");
+      })
+      .catch(error => {
+        console.error("Error:", error);
+        showNotification("Gagal mengatur waktu");
+      });
+  }
+
+  function updateSchedules() {
+    database.ref(`devices/${deviceId}/status/nextSchedules`).once('value')
+      .then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          let s = '';
+          data.forEach(item => {
+            s += `<div class="schedule-item">${item}</div>`;
+          });
+          document.getElementById('schedule-list').innerHTML = s;
+        }
+      })
+      .catch(error => {
+        console.error("Error getting schedules:", error);
+      });
+  }
+
+  function toggleForm(formType, action = 'toggle') {
+    const formIds = {
+      wifi: 'wifi-setting',
+      time: 'time-settings',
+      schedule: 'schedule-setting',
+      editor: 'schedule-editor'
+    };
+
+    const form = document.getElementById(formIds[formType]);
+    if (!form) return;
+
+    if (formType === 'schedule' && action === 'open') {
+      updateSchedules();
+    }
+
+    if (action === 'close' || !form.classList.contains('hidden')) {
+      form.style.animation = 'formClose 0.6s cubic-bezier(0.65, 0, 0.35, 1) forwards';
+      form.addEventListener('animationend', () => {
+        form.classList.add('hidden');
+      }, { once: true });
+    } else {
+      form.classList.remove('hidden');
+      form.style.animation = 'formAppear 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards';
+    }
+  }
+
+  function closeScheduleList() {
+    toggleForm('schedule', 'close');
+  }
+
+  function openScheduleEditor() {
+    database.ref(`devices/${deviceId}/status/allSchedules`).once('value')
+      .then(snapshot => {
+        allSchedules = snapshot.val() || {};
+        loadDaySchedules();
+        toggleForm('editor', 'open');
+      })
+      .catch(error => {
+        console.error('Error loading schedules:', error);
+        showNotification('Gagal memuat jadwal');
+      });
+  }
+
+  function loadDaySchedules() {
+    currentEditingDay = document.getElementById('editor-day-type').value;
+    const schedules = allSchedules[currentEditingDay] || [];
+    const scheduleList = document.getElementById('editor-schedule-list');
+    
+    let html = '<h3>Jadwal ' + getDayName(currentEditingDay) + '</h3>';
+    
+    if (schedules.length === 0) {
+      html += '<p>Tidak ada jadwal</p>';
+    } else {
+      html += '<ul class="schedule-items">';
+      schedules.forEach((schedule, index) => {
+        html += `
+          <li class="schedule-item">
+            <span class="schedule-time">${formatTime(schedule.hour, schedule.minute)}</span>
+            <span class="schedule-device">${getDeviceName(schedule.relay)}</span>
+            <span class="schedule-action ${schedule.state ? 'ON' : 'OFF'}">${schedule.state ? 'ON' : 'OFF'}</span>
+            <button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>
+          </li>
+        `;
+      });
+      html += '</ul>';
+    }
+    
+    scheduleList.innerHTML = html;
+  }
+
+  function addSchedule() {
+    const relay = parseInt(document.getElementById('new-schedule-relay').value);
+    const hour = parseInt(document.getElementById('new-schedule-hour').value);
+    const minute = parseInt(document.getElementById('new-schedule-minute').value);
+    const state = document.getElementById('new-schedule-action').value === '1';
+    
+    if (isNaN(hour) || hour < 0 || hour > 23) {
+      showNotification('Masukkan jam yang valid (0-23)');
+      return;
+    }
+    
+    if (isNaN(minute) || minute < 0 || minute > 59) {
+      showNotification('Masukkan menit yang valid (0-59)');
+      return;
+    }
+
+    const newSchedule = {
+      dayType: currentEditingDay,
+      hour: hour,
+      minute: minute,
+      relay: relay,
+      state: state
+    };
+
+    database.ref(`devices/${deviceId}/commands/schedules`).push(newSchedule)
+      .then(() => {
+        showNotification('Jadwal berhasil ditambah');
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showNotification('Gagal menambah jadwal');
+      });
+  }
+
+  function deleteSchedule(index) {
+    if (!confirm('Hapus jadwal ini?')) return;
+    
+    database.ref(`devices/${deviceId}/commands/deleteSchedule`).set({
+      dayType: currentEditingDay,
+      index: index
+    })
+    .then(() => {
+      showNotification('Jadwal berhasil dihapus');
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showNotification('Gagal menghapus jadwal');
+    });
+  }
+
+  function saveAllSchedules() {
+    showNotification('Perubahan jadwal telah disimpan');
+    closeScheduleEditor();
+  }
+
+  function closeScheduleEditor() {
+    toggleForm('editor', 'close');
+  }
+
+  // Helper functions
+  function getDayName(dayType) {
+    const names = {
+      'normal': 'Hari Biasa',
+      'friday': 'Jumat',
+      'saturday': 'Sabtu',
+      'sunday': 'Minggu',
+      'nyamuk': 'Nyamuk'
+    };
+    return names[dayType] || dayType;
+  }
+
+  function getDeviceName(relayIndex) {
+    const names = {
+      0: 'Lampu',
+      1: 'Kipas',
+      2: 'Nyamuk',
+      4: 'Stop Kontak',
+      3: 'LED'
+    };
+    return names[relayIndex] || 'Unknown';
+  }
+
+  function formatTime(h, m) {
+    return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+  }
+
+  function hideWarningMessage() {
+    let e = document.getElementById('warning-message');
+    if(e) e.remove();
+  }
+
+  // Initialize Firebase listeners
+  function initFirebaseListeners() {
+    // Listen for status updates
+    database.ref(`devices/${deviceId}/status`).on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Update time
+        if (data.time) {
+          document.getElementById('time').innerText = 
+            `${data.time.hour}:${data.time.minute}:${data.time.second}`;
+          updateDayDisplay(data.time.day);
+        }
+        
+        // Update relay status
+        if (data.relays) {
+          for (let i = 0; i < 5; i++) {
+            const e = document.getElementById(`relay${i}`);
+            if (e) {
+              e.classList.toggle('on', data.relays[i] === "ON");
+            }
+          }
+        }
+        
+        // Update next schedules
+        if (data.nextSchedules) {
+          let s = '';
+          data.nextSchedules.forEach(i => {
+            s += `<div class="schedule-item">${i}</div>`;
+          });
+          document.getElementById('schedule-list').innerHTML = s;
+        }
       }
-    }
+    });
+  }
 
-    function toggleRelay(key) {
-      relays[key] = relays[key] ? 0 : 1;
-      fetch(firebaseURL, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: relays[key] })
-      }).then(() => renderButtons());
-    }
+  // Initialize
+  window.addEventListener('load', () => {
+    initFirebaseListeners();
+    setInterval(updateTime, 1000);
+    setInterval(updateRelayStatus, 1000);
+    setInterval(updateSchedules, 900000);
 
-    function fetchRelayStatus() {
-      fetch(firebaseURL)
-        .then(res => res.json())
-        .then(data => {
-          relays = data || relays;
-          renderButtons();
-        });
-    }
-
-    setInterval(fetchRelayStatus, 500); // auto-refresh tiap 3 detik
-    fetchRelayStatus();
-  </script>
+    updateTime();
+    updateRelayStatus();
+    updateSchedules();
+  });
+</script>
 </body>
 </html>
