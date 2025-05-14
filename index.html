@@ -1,277 +1,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SWITCH Controller (Firebase)</title>
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<style>
-body {
-  font-family: Arial, sans-serif; 
-  text-align: center; 
-  background: #F5F5F5; 
-  color: #000080;
-  margin: 0;
-  padding: 0;
-}
-
-.container { 
-  margin-top: 20px; 
-}
-
-.datetime-container { 
-  width: 95%; 
-  max-width: 400px; 
-  margin: 0 auto; 
-  border-radius: 10px; 
-  overflow: hidden; 
-}
-
-.judul {
-  text-align: center; 
-  width: 100%; 
-  margin: 2px; 
-  padding: 0; 
-  font-size: 4em; 
-  line-height: 1; 
-  cursor: pointer; 
-  color: #566D7E; 
-  user-select: none; 
-  border-bottom: 2px solid transparent; 
-  transition: border-color .3s ease; 
-  display: inline-block; 
-}
-
-.judul:hover { 
-  border-color: #0099FF; 
-}
-
-.day-display { 
-  font-size: 3em; 
-  background:#E0E5E5; 
-  font-weight: bold; 
-  padding: 10px 20px; 
-  border: 4px solid black; 
-  border-bottom: none; 
-  border-radius: 10px 10px 0 0; 
-}
-
-.time-display { 
-  font-size: 3.5em; 
-  font-weight: bold; 
-  padding: 10px 20px; 
-  background:#00BFFF; 
-  color: white; 
-  border: 4px solid black; 
-  border-top: none; 
-  border-radius: 0 0 10px 10px; 
-}
-
-.day-display.sunday { color: red; }
-.day-display.friday { color: green; }
-.day-display.other { color: black; }
-
-.relay-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  padding: 8px;
-  width: 91%;
-  max-width: 600px;
-  margin: 5px auto 0;
-}
-
-.relay {
-  width: 100%;
-  min-height: 60px;
-  box-sizing: border-box;
-  position: relative;
-  background: #0C090A;
-  color: white;
-  border-radius: 4px;
-  padding: 10px 5px;
-  font-weight: bold;
-  text-align: center;
-  transition: all 0.3s ease;
-  border: 1.5px solid white;
-  box-shadow: 0 0 0 3px #483C32;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.relay:nth-child(5) {
-  grid-column: span 2;
-  max-width: calc(200% + 10px);
-}
-
-.relay.on {
-  color: #00FFFF;
-  border-color: #00FFFF;
-  box-shadow: 0 0 0 4px #483C32;
-}
-
-.notification {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #00BFFF;
-  color: white;
-  padding: 15px 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  font-size: 1.1em;
-  z-index: 9999;
-  opacity: 0;
-  filter: blur(8px);
-  display: none;
-  animation: none;
-}
-
-@keyframes appearWithBlur {
-  0% { opacity: 0; filter: blur(8px); }
-  30% { opacity: 0.3; filter: blur(6px); }
-  70% { opacity: 0.7; filter: blur(3px); }
-  100% { opacity: 1; filter: blur(0); }
-}
-
-@keyframes disappearWithBlur {
-  0% { opacity: 1; filter: blur(0); }
-  30% { opacity: 0.7; filter: blur(3px); }
-  70% { opacity: 0.3; filter: blur(6px); }
-  100% { opacity: 0; filter: blur(8px); }
-}
-
-@keyframes blink { 
-  0% { opacity: 1 } 
-  50% { opacity: 0 } 
-  100% { opacity: 1 } 
-}
-</style>
+  <meta charset="UTF-8">
+  <title>Kontrol Relay Firebase</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
+    h1 { margin-top: 30px; }
+    .relay-btn {
+      margin: 10px;
+      padding: 15px 30px;
+      font-size: 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .on { background-color: #4CAF50; color: white; }
+    .off { background-color: #f44336; color: white; }
+  </style>
 </head>
 <body>
-<div class="container">
-<h1 class="judul">SWITCH</h1>
-<div class="datetime-container">
-  <div class="day-display" id="day-display">Minggu</div>
-  <div class="time-display" id="time">00:00:00</div>
-</div>
-<div class="relay-grid">
-  <div class="relay" id="relay0" data-name="Lampu">Lampu</div>
-  <div class="relay" id="relay1" data-name="Kipas">Kipas</div>
-  <div class="relay" id="relay2" data-name="Nyamuk">Nyamuk</div>
-  <div class="relay" id="relay3" data-name="LED">LED</div>
-  <div class="relay" id="relay4" data-name="Stop Kontak">Stop Kontak</div>
-</div>
-<div id="notification" class="notification"></div>
+  <h1>Kontrol 4 Relay via Firebase</h1>
+  <div id="buttons"></div>
 
-<script>
-  // Konfigurasi Firebase
-  const firebaseConfig = {
-    apiKey: "AIzaSyB9-JkNWyY2tWDFH3O25I1iK7ANoL6zg-0",
-    authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
-    databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ihsan-cloud-f3a02",
-    storageBucket: "ihsan-cloud-f3a02.firebasestorage.app",
-    messagingSenderId: "442997712719",
-    appId: "1:442997712719:web:de3ef3dc4cbb5b5925873a"
-  };
+  <script>
+    const firebaseURL = "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app/relay.json";
 
-  // Inisialisasi Firebase
-  firebase.initializeApp(firebaseConfig);
-  const database = firebase.database();
-  const deviceRef = database.ref('devices/device001');
+    let relays = { r1: 0, r2: 0, r3: 0, r4: 0 };
 
-  // Variabel
-  let notificationTimeout = null;
-
-  // Fungsi untuk menampilkan notifikasi
-  function showNotification(message, duration = 4000) {
-    const notif = document.getElementById('notification');
-    if (!notif) return;
-
-    if (notificationTimeout) {
-      clearTimeout(notificationTimeout);
-      notif.style.animation = 'none';
-      notif.style.display = 'none';
-      void notif.offsetHeight;
-    }
-
-    notif.textContent = message;
-    notif.style.display = 'block';
-    notif.style.opacity = '0';
-    notif.style.filter = 'blur(8px)';
-    notif.style.animation = 'appearWithBlur 0.8s forwards';
-
-    notificationTimeout = setTimeout(() => {
-      notif.style.animation = 'disappearWithBlur 0.8s forwards';
-      const onAnimationEnd = () => {
-        notif.style.display = 'none';
-        notif.removeEventListener('animationend', onAnimationEnd);
-      };
-      notif.addEventListener('animationend', onAnimationEnd);
-    }, duration);
-  }
-
-  // Fungsi untuk toggle relay
-  function toggleRelay(relayNum) {
-    const relayRef = database.ref('devices/device001/relays/relay' + relayNum);
-    relayRef.once('value').then(snapshot => {
-      const currentState = snapshot.val();
-      const newState = currentState === 'ON' ? 'OFF' : 'ON';
-      relayRef.set(newState)
-        .then(() => {
-          const deviceName = document.getElementById(`relay${relayNum}`).dataset.name;
-          showNotification(`${deviceName} ${newState === 'ON' ? 'Menyala' : 'Mati'}`);
-        });
-    });
-  }
-
-  // Setup event listeners untuk relay
-  document.getElementById('relay0').addEventListener('click', () => toggleRelay(0));
-  document.getElementById('relay1').addEventListener('click', () => toggleRelay(1));
-  document.getElementById('relay2').addEventListener('click', () => toggleRelay(2));
-  document.getElementById('relay3').addEventListener('click', () => toggleRelay(3));
-  document.getElementById('relay4').addEventListener('click', () => toggleRelay(4));
-
-  // Listen for relay state changes
-  deviceRef.child('relays').on('value', (snapshot) => {
-    const states = snapshot.val();
-    for (let i = 0; i < 5; i++) {
-      const element = document.getElementById(`relay${i}`);
-      if (element && states[`relay${i}`]) {
-        element.classList.toggle('on', states[`relay${i}`] === 'ON');
+    function renderButtons() {
+      const container = document.getElementById("buttons");
+      container.innerHTML = "";
+      for (let i = 1; i <= 4; i++) {
+        const key = `r${i}`;
+        const btn = document.createElement("button");
+        btn.className = "relay-btn " + (relays[key] ? "on" : "off");
+        btn.textContent = `Relay ${i} (${relays[key] ? "ON" : "OFF"})`;
+        btn.onclick = () => toggleRelay(key);
+        container.appendChild(btn);
       }
     }
-  });
 
-  // Update waktu secara real-time
-  function updateTime() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('time').textContent = `${hours}:${minutes}:${seconds}`;
-    
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jum\'at', 'Sabtu'];
-    const dayElement = document.getElementById('day-display');
-    const day = now.getDay();
-    dayElement.textContent = days[day];
-    dayElement.className = "day-display";
-    
-    if (day === 0) dayElement.classList.add('sunday');
-    else if (day === 5) dayElement.classList.add('friday');
-    else dayElement.classList.add('other');
-  }
+    function toggleRelay(key) {
+      relays[key] = relays[key] ? 0 : 1;
+      fetch(firebaseURL, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: relays[key] })
+      }).then(() => renderButtons());
+    }
 
-  // Update waktu setiap detik
-  updateTime();
-  setInterval(updateTime, 1000);
-</script>
+    function fetchRelayStatus() {
+      fetch(firebaseURL)
+        .then(res => res.json())
+        .then(data => {
+          relays = data || relays;
+          renderButtons();
+        });
+    }
+
+    setInterval(fetchRelayStatus, 3000); // auto-refresh tiap 3 detik
+    fetchRelayStatus();
+  </script>
 </body>
 </html>
