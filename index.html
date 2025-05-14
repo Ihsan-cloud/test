@@ -340,6 +340,8 @@ font-size: 0.5em;
   100% { opacity: 1 } 
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
 <div class="container">
@@ -453,346 +455,275 @@ font-size: 0.5em;
       </div>
       
 
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script>
-// Konfigurasi Firebase
 const firebaseConfig = {
-    apiKey: "AIzaSyYOUR_API_KEY",
-    authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
-    databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "ihsan-cloud-f3a02",
-    storageBucket: "ihsan-cloud-f3a02.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "1:YOUR_APP_ID:web:YOUR_APP_KEY"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "ihsan-cloud-f3a02.firebaseapp.com",
+  databaseURL: "https://ihsan-cloud-f3a02-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "ihsan-cloud-f3a02",
+  storageBucket: "ihsan-cloud-f3a02.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-// Inisialisasi Firebase
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Variabel Global
+// Global variables
 let notificationTimeout = null;
 let currentEditingDay = 'normal';
 let allSchedules = {};
-const manualControl = [false, false, false, false, false];
+let relayStates = [false, false, false, false, false];
+const deviceNames = {
+  0: "Lampu",
+  1: "Kipas",
+  2: "Nyamuk",
+  3: "LED",
+  4: "Stop Kontak"
+};
 
-// Fungsi Utama
-function initializeApp() {
-    setupFirebaseListeners();
-    setupEventListeners();
-    startTimers();
-    loadInitialData();
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  initRelayListeners();
+  loadSchedules();
+  setInterval(updateTime, 1000);
+});
+
+// Initialize real-time relay listeners
+function initRelayListeners() {
+  for (let i = 0; i < 5; i++) {
+    database.ref('relays/relay' + i).on('value', (snapshot) => {
+      const state = snapshot.val();
+      relayStates[i] = state;
+      const relayElement = document.getElementById(`relay${i}`);
+      if (relayElement) {
+        relayElement.classList.toggle('on', state);
+      }
+    });
+  }
 }
 
-// Firebase Functions
-function syncRelayStateToFirebase(relayId, state) {
-    database.ref(`devices/relay${relayId}`).set(state ? "ON" : "OFF")
-        .then(() => console.log(`Relay ${relayId} updated to Firebase`))
-        .catch(error => console.error('Firebase sync error:', error));
-}
-
-function syncTimeToFirebase(hour, minute, day) {
-    database.ref('system/time').set({
-        hour: hour,
-        minute: minute,
-        day: day
-    }).then(() => console.log('Time synced to Firebase'))
-      .catch(error => console.error('Time sync error:', error));
-}
-
-function setupFirebaseListeners() {
-    // Listen for relay changes
-    for (let i = 0; i < 5; i++) {
-        database.ref(`devices/relay${i}`).on('value', (snapshot) => {
-            const state = snapshot.val();
-            if (state !== null && !manualControl[i]) {
-                const relayElement = document.getElementById(`relay${i}`);
-                const currentState = relayElement.classList.contains('on');
-                const newState = state === "ON";
-                
-                if (currentState !== newState) {
-                    toggleRelay(i, true); // true means skip Firebase sync
-                }
-            }
-        });
-    }
-
-    // Listen for time changes
-    database.ref('system/time').on('value', (snapshot) => {
-        const timeData = snapshot.val();
-        if (timeData) {
-            updateTimeDisplay(timeData.hour, timeData.minute, timeData.day);
-        }
+// Toggle relay state
+function toggleRelay(id) {
+  const newState = !relayStates[id];
+  database.ref('relays/relay' + id).set(newState)
+    .then(() => {
+      showNotification(`${deviceNames[id]} ${newState ? "Menyala" : "Mati"}`);
+    })
+    .catch((error) => {
+      console.error("Error updating relay:", error);
+      showNotification("Gagal mengontrol perangkat");
     });
 }
 
-// UI Functions
-function toggleRelay(id, skipFirebaseSync = false) {
-    fetch(`/control?relay${id}=TOGGLE`)
-        .then(response => {
-            if (!response.ok) throw Error("Control failed");
-            return response.text();
-        })
-        .then(state => {
-            const relayElement = document.getElementById(`relay${id}`);
-            const isOn = state === "ON";
-            
-            relayElement.classList.toggle('on', isOn);
-            showNotification(`${relayElement.dataset.name} ${isOn ? "ON" : "OFF"}`);
-            
-            if (!skipFirebaseSync) {
-                syncRelayStateToFirebase(id, isOn);
-            }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            showNotification("Control failed");
-        });
+// Notification system (unchanged)
+function showNotification(message, duration = 4000) {
+  const notif = document.getElementById('notification');
+  if (!notif) return;
+
+  if (notificationTimeout) {
+    clearTimeout(notificationTimeout);
+    notif.style.animation = 'none';
+    notif.style.display = 'none';
+    void notif.offsetHeight;
+  }
+
+  notif.textContent = message;
+  notif.style.display = 'block';
+  notif.style.opacity = '0';
+  notif.style.filter = 'blur(8px)';
+  notif.style.animation = 'appearWithBlur 0.8s forwards';
+
+  notificationTimeout = setTimeout(() => {
+    notif.style.animation = 'disappearWithBlur 0.8s forwards';
+    notif.addEventListener('animationend', () => {
+      notif.style.display = 'none';
+    }, { once: true });
+  }, duration);
 }
 
+// Time functions
 function updateTime() {
-    fetch('/getTime')
-        .then(response => response.json())
-        .then(data => {
-            updateTimeDisplay(data.hour, data.minute, data.day);
-            syncTimeToFirebase(data.hour, data.minute, data.day);
-        })
-        .catch(error => console.error("Failed to update time:", error));
+  const now = new Date();
+  document.getElementById('time').innerText = 
+    `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+  updateDayDisplay(now.getDay());
 }
 
-function updateTimeDisplay(hour, minute, day) {
-    // Format waktu dengan leading zero
-    const formattedTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
-    document.getElementById('time').textContent = formattedTime;
-    
-    // Update tampilan hari
-    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
-    const dayElement = document.getElementById('day-display');
-    dayElement.textContent = days[day];
-    
-    // Styling khusus hari
-    dayElement.className = "day-display";
-    if (day === 0) dayElement.classList.add('sunday');
-    else if (day === 5) dayElement.classList.add('friday');
-    else dayElement.classList.add('other');
+function updateDayDisplay(day) {
+  const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu"];
+  const dayElement = document.getElementById('day-display');
+  dayElement.innerText = days[day];
+  dayElement.className = "day-display";
+  if(day === 0) dayElement.classList.add('sunday');
+  else if(day === 5) dayElement.classList.add('friday');
+  else dayElement.classList.add('other');
 }
 
-function updateRelayStatus() {
-    fetch('/getRelayStatus')
-        .then(response => {
-            if (!response.ok) throw Error("Status update failed");
-            return response.json();
-        })
-        .then(data => {
-            for (let i = 0; i < 5; i++) {
-                const relayElement = document.getElementById(`relay${i}`);
-                const state = data[`relay${i}`];
-                relayElement.classList.toggle('on', state === "ON");
-            }
-        })
-        .catch(error => console.error("Status update error:", error));
-}
-
-// Schedule Management
-function updateSchedules() {
-    fetch('/getNextSchedules')
-        .then(response => response.json())
-        .then(data => {
-            let scheduleHTML = '';
-            data.schedules.forEach(item => {
-                scheduleHTML += `<div class="schedule-item">${item}</div>`;
-            });
-            document.getElementById('schedule-list').innerHTML = scheduleHTML;
-        })
-        .catch(error => console.error("Schedule update error:", error));
+// Schedule management
+function loadSchedules() {
+  database.ref('schedules').once('value')
+    .then((snapshot) => {
+      allSchedules = snapshot.val() || {};
+    })
+    .catch((error) => {
+      console.error("Error loading schedules:", error);
+    });
 }
 
 function openScheduleEditor() {
-    fetch('/getAllSchedules')
-        .then(response => response.json())
-        .then(data => {
-            allSchedules = data;
-            loadDaySchedules();
-            toggleForm('editor', 'open');
-        })
-        .catch(error => {
-            console.error('Error loading schedules:', error);
-            showNotification('Failed to load schedules');
-        });
-}
-
-function loadDaySchedules() {
-    currentEditingDay = document.getElementById('editor-day-type').value;
-    const schedules = allSchedules[currentEditingDay] || [];
-    const scheduleList = document.getElementById('editor-schedule-list');
-    
-    let html = `<h3>${getDayName(currentEditingDay)} Schedules</h3>`;
-    
-    if (schedules.length === 0) {
-        html += '<p>No schedules</p>';
-    } else {
-        html += '<ul class="schedule-items">';
-        schedules.forEach((schedule, index) => {
-            html += `
-                <li class="schedule-item">
-                    <span class="schedule-time">${formatTime(schedule.hour, schedule.minute)}</span>
-                    <span class="schedule-device">${getDeviceName(schedule.relay)}</span>
-                    <span class="schedule-action ${schedule.state ? 'ON' : 'OFF'}">${schedule.state ? 'ON' : 'OFF'}</span>
-                    <button class="btn-delete" onclick="deleteSchedule(${index})">Delete</button>
-                </li>
-            `;
-        });
-        html += '</ul>';
-    }
-    
-    scheduleList.innerHTML = html;
-}
-
-// Helper Functions
-function showNotification(message, duration = 4000) {
-    const notif = document.getElementById('notification');
-    if (!notif) return;
-
-    if (notificationTimeout) {
-        clearTimeout(notificationTimeout);
-        notif.style.animation = 'none';
-        notif.style.display = 'none';
-        void notif.offsetHeight;
-    }
-
-    notif.textContent = message;
-    notif.style.display = 'block';
-    notif.style.animation = 'appearWithBlur 0.8s forwards';
-
-    notificationTimeout = setTimeout(() => {
-        notif.style.animation = 'disappearWithBlur 0.8s forwards';
-        notif.addEventListener('animationend', () => {
-            notif.style.display = 'none';
-        }, { once: true });
-    }, duration);
-}
-
-function getDayName(dayType) {
-    const names = {
-        'normal': 'Normal Day',
-        'friday': 'Friday',
-        'saturday': 'Saturday',
-        'sunday': 'Sunday',
-        'nyamuk': 'Nyamuk Schedule'
-    };
-    return names[dayType] || dayType;
-}
-
-function getDeviceName(relayIndex) {
-    const names = {
-        0: 'Lamp',
-        1: 'Fan',
-        2: 'Nyamuk',
-        4: 'Outlet',
-        3: 'LED'
-    };
-    return names[relayIndex] || 'Unknown';
-}
-
-function formatTime(h, m) {
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-}
-
-// Event Listeners
-function setupEventListeners() {
-    // Relay click handlers
-    for (let i = 0; i < 5; i++) {
-        document.getElementById(`relay${i}`).addEventListener('click', () => toggleRelay(i));
-    }
-
-    // Form handlers
-    document.querySelector('#wifi-setting button[onclick="submitWiFiForm()"]')
-        .addEventListener('click', submitWiFiForm);
-    
-    document.querySelector('#time-settings button[onclick="setTime()"]')
-        .addEventListener('click', setTime);
-}
-
-function submitWiFiForm() {
-    const ssid = document.getElementById('wifi-ssid').value;
-    const password = document.getElementById('wifi-password').value;
-    
-    fetch('/setWiFi', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ssid, password })
+  database.ref('schedules').once('value')
+    .then((snapshot) => {
+      allSchedules = snapshot.val() || {};
+      loadDaySchedules();
+      toggleForm('editor', 'open');
     })
-    .then(response => {
-        if (!response.ok) throw Error('WiFi config failed');
-        toggleForm('wifi', 'close');
-        showNotification('WiFi settings saved');
-    })
-    .catch(error => {
-        console.error(error);
-        showNotification('Failed to save WiFi settings');
+    .catch((error) => {
+      console.error('Error loading schedules:', error);
+      showNotification('Gagal memuat jadwal');
     });
 }
 
-function setTime() {
-    const hour = document.getElementById('hour').value;
-    const minute = document.getElementById('minute').value;
-    const day = document.getElementById('day').value;
-    
-    fetch(`/setTime?hour=${hour}&minute=${minute}&day=${day}`)
-        .then(() => {
-            toggleForm('time', 'close');
-            updateTime();
-        })
-        .catch(error => {
-            console.error("Time set error:", error);
-            showNotification("Failed to set time");
-        });
+function loadDaySchedules() {
+  currentEditingDay = document.getElementById('editor-day-type').value;
+  const schedules = allSchedules[currentEditingDay] || [];
+  const scheduleList = document.getElementById('editor-schedule-list');
+  
+  let html = '<h3>Jadwal ' + getDayName(currentEditingDay) + '</h3>';
+  
+  if (schedules.length === 0) {
+    html += '<p>Tidak ada jadwal</p>';
+  } else {
+    html += '<ul class="schedule-items">';
+    schedules.forEach((schedule, index) => {
+      html += `
+        <li class="schedule-item">
+          <span class="schedule-time">${formatTime(schedule.hour, schedule.minute)}</span>
+          <span class="schedule-device">${deviceNames[schedule.relay]}</span>
+          <span class="schedule-action ${schedule.state ? 'ON' : 'OFF'}">${schedule.state ? 'ON' : 'OFF'}</span>
+          <button class="btn-delete" onclick="deleteSchedule(${index})">Hapus</button>
+        </li>
+      `;
+    });
+    html += '</ul>';
+  }
+  
+  scheduleList.innerHTML = html;
 }
 
-// Timer Functions
-function startTimers() {
-    setInterval(updateTime, 1000);
-    setInterval(updateRelayStatus, 5000);
-    setInterval(updateSchedules, 300000); // 5 minutes
+function addSchedule() {
+  const relay = parseInt(document.getElementById('new-schedule-relay').value);
+  const hour = parseInt(document.getElementById('new-schedule-hour').value);
+  const minute = parseInt(document.getElementById('new-schedule-minute').value);
+  const state = document.getElementById('new-schedule-action').value === '1';
+  
+  if (isNaN(hour) || hour < 0 || hour > 23) {
+    showNotification('Masukkan jam yang valid (0-23)');
+    return;
+  }
+  
+  if (isNaN(minute) || minute < 0 || minute > 59) {
+    showNotification('Masukkan menit yang valid (0-59)');
+    return;
+  }
+
+  const newSchedule = {
+    hour: hour,
+    minute: minute,
+    relay: relay,
+    state: state
+  };
+
+  if (!allSchedules[currentEditingDay]) {
+    allSchedules[currentEditingDay] = [];
+  }
+
+  allSchedules[currentEditingDay].push(newSchedule);
+  database.ref('schedules').set(allSchedules)
+    .then(() => {
+      showNotification('Jadwal berhasil ditambah');
+      loadDaySchedules();
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      showNotification('Gagal menambah jadwal');
+    });
 }
 
-function loadInitialData() {
-    updateTime();
-    updateRelayStatus();
-    updateSchedules();
+function deleteSchedule(index) {
+  if (!confirm('Hapus jadwal ini?')) return;
+  
+  allSchedules[currentEditingDay].splice(index, 1);
+  database.ref('schedules').set(allSchedules)
+    .then(() => {
+      showNotification('Jadwal berhasil dihapus');
+      loadDaySchedules();
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      showNotification('Gagal menghapus jadwal');
+    });
 }
 
-// Form Management
+function saveAllSchedules() {
+  database.ref('schedules').set(allSchedules)
+    .then(() => {
+      showNotification('Perubahan jadwal telah disimpan');
+      closeScheduleEditor();
+    })
+    .catch((error) => {
+      console.error('Error saving schedules:', error);
+      showNotification('Gagal menyimpan jadwal');
+    });
+}
+
+// Helper functions
+function getDayName(dayType) {
+  const names = {
+    'normal': 'Hari Biasa',
+    'friday': 'Jumat',
+    'saturday': 'Sabtu',
+    'sunday': 'Minggu',
+    'nyamuk': 'Nyamuk'
+  };
+  return names[dayType] || dayType;
+}
+
+function formatTime(h, m) {
+  return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+}
+
+// Form handling functions (unchanged)
 function toggleForm(formType, action = 'toggle') {
-    const formIds = {
-        wifi: 'wifi-setting',
-        time: 'time-settings',
-        schedule: 'schedule-setting',
-        editor: 'schedule-editor'
-    };
+  const formIds = {
+    wifi: 'wifi-setting',
+    time: 'time-settings',
+    schedule: 'schedule-setting',
+    editor: 'schedule-editor'
+  };
 
-    const form = document.getElementById(formIds[formType]);
-    if (!form) return;
+  const form = document.getElementById(formIds[formType]);
+  if (!form) return;
 
-    if (action === 'close' || !form.classList.contains('hidden')) {
-        form.style.animation = 'formClose 0.6s forwards';
-        form.addEventListener('animationend', () => {
-            form.classList.add('hidden');
-        }, { once: true });
-    } else {
-        form.classList.remove('hidden');
-        form.style.animation = 'formAppear 0.6s forwards';
-        
-        if (formType === 'schedule') {
-            updateSchedules();
-        }
-    }
+  if (action === 'close' || !form.classList.contains('hidden')) {
+    form.style.animation = 'formClose 0.6s forwards';
+    form.addEventListener('animationend', () => {
+      form.classList.add('hidden');
+    }, { once: true });
+  } else {
+    form.classList.remove('hidden');
+    form.style.animation = 'formAppear 0.6s forwards';
+  }
 }
 
-// Initialize the application
-document.addEventListener('DOMContentLoaded', initializeApp);
+function closeScheduleEditor() {
+  toggleForm('editor', 'close');
+}
 
+function closeScheduleList() {
+  toggleForm('schedule', 'close');
+}
 </script>
 </body>
 </html>
